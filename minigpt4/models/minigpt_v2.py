@@ -3,12 +3,19 @@ import random
 
 import torch
 from torch.cuda.amp import autocast as autocast
-import torch.nn as nn
 
 from minigpt4.common.registry import registry
 from minigpt4.models.base_model import disabled_train
 from minigpt4.models.minigpt_base import MiniGPTBase
 from minigpt4.models.Qformer import BertConfig, BertLMHeadModel
+from minigpt4.models.projection import (
+    AUTO_PROJECTION,
+    build_projection,
+    checkpoint_state_dict,
+    infer_lora_rank,
+    resolve_projection_type,
+    validate_adaptation_load,
+)
 
 
 @registry.register_model("minigpt_v2")
@@ -40,6 +47,8 @@ class MiniGPTv2(MiniGPTBase):
             chat_template=False,
             use_grad_checkpoint_llm=False,
             max_context_len=3800,
+            projection_type="linear",
+            projection_dropout=0.1,
             low_resource=False,  # use 8 bit and put vit in cpu
             device_8bit=0,  # the device of 8bit model should be set when loading and cannot be changed anymore.
     ):
@@ -64,8 +73,15 @@ class MiniGPTv2(MiniGPTBase):
         )
 
         img_f_dim = self.visual_encoder.num_features * 4
-        self.llama_proj = nn.Linear(
-            img_f_dim, self.llama_model.config.hidden_size
+        self.projection_type = resolve_projection_type(projection_type)
+        self.projection_input_dim = img_f_dim
+        self.projection_output_dim = self.llama_model.config.hidden_size
+        self.projection_dropout = projection_dropout
+        self.llama_proj = build_projection(
+            projection_type=self.projection_type,
+            in_dim=self.projection_input_dim,
+            out_dim=self.projection_output_dim,
+            dropout=self.projection_dropout,
         )
         self.chat_template = chat_template
 
@@ -110,6 +126,8 @@ class MiniGPTv2(MiniGPTBase):
 
         use_grad_checkpoint_llm = cfg.get("use_grad_checkpoint_llm", False)
         max_context_len = cfg.get("max_context_len", 3800)
+        projection_type = cfg.get("projection_type", AUTO_PROJECTION)
+        projection_dropout = cfg.get("projection_dropout", 0.1)
 
         model = cls(
             vit_model=vit_model,
@@ -128,12 +146,45 @@ class MiniGPTv2(MiniGPTBase):
             chat_template=chat_template,
             use_grad_checkpoint_llm=use_grad_checkpoint_llm,
             max_context_len=max_context_len,
+            projection_type=(
+                "linear" if projection_type == AUTO_PROJECTION else projection_type
+            ),
+            projection_dropout=projection_dropout,
         )
 
         ckpt_path = cfg.get("ckpt", "")  # load weights of MiniGPT-4
         if ckpt_path:
             print("Load Minigpt-4-LLM Checkpoint: {}".format(ckpt_path))
             ckpt = torch.load(ckpt_path, map_location="cpu")
-            msg = model.load_state_dict(ckpt['model'], strict=False)
+            state_dict = checkpoint_state_dict(ckpt)
+            resolved_projection_type = resolve_projection_type(
+                projection_type, state_dict
+            )
+
+            checkpoint_lora_rank = infer_lora_rank(state_dict)
+            if checkpoint_lora_rank is not None and checkpoint_lora_rank != lora_r:
+                raise ValueError(
+                    f"Configured lora_r={lora_r} does not match checkpoint "
+                    f"LoRA rank {checkpoint_lora_rank}."
+                )
+
+            if resolved_projection_type != model.projection_type:
+                model.projection_type = resolved_projection_type
+                model.llama_proj = build_projection(
+                    projection_type=resolved_projection_type,
+                    in_dim=model.projection_input_dim,
+                    out_dim=model.projection_output_dim,
+                    state_dict=state_dict,
+                    dropout=model.projection_dropout,
+                )
+
+            msg = model.load_state_dict(state_dict, strict=False)
+            validate_adaptation_load(msg, state_dict)
+            logging.info(
+                "Loaded checkpoint with %s projection; missing=%d, unexpected=%d",
+                model.projection_type,
+                len(msg.missing_keys),
+                len(msg.unexpected_keys),
+            )
 
         return model

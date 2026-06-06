@@ -1,0 +1,28 @@
+model:
+  arch: minigpt_v2
+  model_type: pretrain
+  max_txt_len: 1024
+  end_sym: "</s>"
+  low_resource: true
+  prompt_template: "[INST] {} [/INST]"
+  chat_template: true
+  # demo_v2.py overrides these values with project-local paths by default.
+  llama_model: "models/vicuna-7b"
+  ckpt: "models/checkpoint_0.pth"
+  lora_r: 64
+  lora_alpha: 16
+  projection_type: auto
+  projection_dropout: 0.1
+
+datasets:
+  cc_sbu_align:
+    vis_processor:
+      train:
+        name: "blip2_image_eval"
+        image_size: 448
+    text_processor:
+      train:
+        name: "blip_caption"
+
+run:
+  task: image_text_pretrain

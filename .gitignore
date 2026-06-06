@@ -182,3 +182,11 @@ sbatch_generate*
 eval_data/
 dataset/Evaluation.md
 jupyter_notebook.slurm
+
+# Local model weights are intentionally excluded from source control.
+/models/*
+!/models/README.md
+
+# Distribution scripts are part of the project.
+!/scripts/
+!/scripts/*.sh

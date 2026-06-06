@@ -8,6 +8,7 @@
 import os
 import logging
 import contextlib
+import inspect
 
 from omegaconf import OmegaConf
 import numpy as np
@@ -24,6 +25,27 @@ from minigpt4.common.dist_utils import download_cached_file
 from minigpt4.common.utils import get_abs_path, is_url
 from minigpt4.models.eva_vit import create_eva_vit_g
 from minigpt4.models.modeling_llama import LlamaForCausalLM
+
+
+def _enable_legacy_bnb_peft_compatibility():
+    import bitsandbytes as bnb
+
+    linear_init = bnb.nn.Linear8bitLt.__init__
+    if "memory_efficient_backward" in inspect.signature(linear_init).parameters:
+        return
+    if getattr(linear_init, "_minigpt_legacy_compat", False):
+        return
+
+    def compatible_init(
+        self,
+        *args,
+        memory_efficient_backward=False,
+        **kwargs,
+    ):
+        return linear_init(self, *args, **kwargs)
+
+    compatible_init._minigpt_legacy_compat = True
+    bnb.nn.Linear8bitLt.__init__ = compatible_init
 
 
 
@@ -189,6 +211,14 @@ class BaseModel(nn.Module):
 
         if lora_r > 0:
             llama_model = prepare_model_for_int8_training(llama_model)
+            _enable_legacy_bnb_peft_compatibility()
+            # PEFT 0.2 expects this legacy bitsandbytes state attribute.
+            for module in llama_model.modules():
+                state = getattr(module, "state", None)
+                if state is not None and not hasattr(
+                    state, "memory_efficient_backward"
+                ):
+                    state.memory_efficient_backward = False
             loraconfig = LoraConfig(
                 r=lora_r,
                 bias="none",
