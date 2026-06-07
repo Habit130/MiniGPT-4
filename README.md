@@ -1,51 +1,53 @@
-# 智农卫士：基于 MiniGPT-v2 的作物病害视觉诊断平台
+# CropGuard: A MiniGPT-v2 Crop Disease Visual Diagnosis Platform
 
-一个面向作物叶片、茎秆和果实图像的中文视觉问答网页。项目基于 MiniGPT-v2，并针对作物病害场景加载 LoRA 与视觉投影微调权重。
+**English** | [简体中文](README_zh-CN.md)
 
-仓库已经包含完整网页、推理代码、配置、环境定义、启动脚本和 8 张作物示例图。由于体积和许可证限制，模型权重不提交到 Git；使用者只需按说明放置权重，然后执行一条环境安装命令和一条启动命令。
+CropGuard is a Chinese-language visual question answering web application for images of crop leaves, stems, and fruit. It is built on MiniGPT-v2 and loads LoRA and visual projection weights fine-tuned for crop disease scenarios.
 
-> 本项目仅用于科研、教学和辅助研判，不能替代农技人员的现场诊断或农药标签要求。
+This repository contains the complete web interface, inference code, configuration, environment definition, launch scripts, and eight crop example images. Model weights are excluded from Git because of their size and licensing requirements. Users only need to place the weights as documented, run one command to create the environment, and run one command to launch the interface.
 
-## 功能
+> This project is intended for research, education, and assisted assessment only. It does not replace field diagnosis by agricultural professionals or pesticide label requirements.
 
-- 全中文作物病害诊断界面
-- 支持上传作物图片并连续追问
-- 健康诊断、症状分析、病因研判、防治建议和作物识别模式
-- 8 个内置真实作物示例，不依赖仓库外部数据集
-- 自动识别并加载 Linear 或 MLP 视觉投影权重
-- 校验 LoRA rank 和关键权重，避免静默漏载
-- 英文回答通过本地翻译模型转换为简体中文
-- 模型全部本地加载，权重准备完成后可离线推理
+## Features
 
-## 页面示例
+- Fully Chinese crop disease diagnosis interface
+- Upload crop images and ask follow-up questions
+- Health diagnosis, symptom analysis, cause assessment, control advice, and crop identification modes
+- Eight built-in real crop examples with no external dataset dependency
+- Automatic detection and loading of Linear or MLP visual projection weights
+- LoRA rank and critical-weight validation to prevent silently skipped weights
+- Local English-to-Chinese translation when the vision-language model answers in English
+- Fully local model loading and offline inference after all weights are prepared
 
-| 番茄晚疫病 | 苹果雪松锈病 | 水稻稻瘟病 | 健康甜椒 |
+## Interface Examples
+
+| Tomato Late Blight | Apple Cedar Rust | Rice Blast | Healthy Bell Pepper |
 | --- | --- | --- | --- |
 | ![](assets/examples/tomato_late_blight.jpg) | ![](assets/examples/apple_cedar_rust.jpg) | ![](assets/examples/rice_blast.jpg) | ![](assets/examples/bell_pepper_healthy.jpg) |
 
-## 运行要求
+## Requirements
 
-- Windows 10/11 或常见 Linux 发行版
-- NVIDIA GPU，建议显存不少于 12 GB
-- 支持 CUDA 11.8 的 NVIDIA 驱动
-- 建议内存不少于 24 GB
-- Miniconda 或 Anaconda
-- Git LFS，用于下载 Hugging Face 大模型
+- Windows 10/11 or a common Linux distribution
+- NVIDIA GPU with at least 12 GB VRAM recommended
+- NVIDIA driver compatible with CUDA 11.8
+- At least 24 GB system memory recommended
+- Miniconda or Anaconda
+- Git LFS for downloading large Hugging Face models
 
-项目已在 Python 3.9、PyTorch 2.6.0 + CUDA 11.8 环境验证。
+The project has been verified with Python 3.9 and PyTorch 2.6.0 + CUDA 11.8.
 
-## 快速开始
+## Quick Start
 
-### 1. 克隆项目
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Habit130/MiniGPT-4.git
 cd MiniGPT-4
 ```
 
-### 2. 放置模型权重
+### 2. Prepare Model Weights
 
-最终目录必须如下：
+The final directory layout must be:
 
 ```text
 MiniGPT-4/
@@ -63,7 +65,7 @@ MiniGPT-4/
         └── ...
 ```
 
-下载两个 Hugging Face 模型：
+Download the two Hugging Face models:
 
 ```bash
 git lfs install
@@ -71,82 +73,82 @@ git clone https://huggingface.co/Vision-CAIR/vicuna-7b models/vicuna-7b
 git clone https://huggingface.co/Helsinki-NLP/opus-mt-en-zh models/opus-mt-en-zh
 ```
 
-下载 EVA ViT-G：
+Download EVA ViT-G.
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 Invoke-WebRequest "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/eva_vit_g.pth" -OutFile "models/eva_vit_g.pth"
 ```
 
-Linux：
+Linux:
 
 ```bash
 curl -L "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/eva_vit_g.pth" -o models/eva_vit_g.pth
 ```
 
-最后将本项目训练得到的 `checkpoint_0.pth` 放入 `models/`。更详细的说明见 [models/README.md](models/README.md)。
+Finally, place the crop disease fine-tuned `checkpoint_0.pth` in `models/`. See [models/README.md](models/README.md) for more details.
 
-### 3. 一条命令构建环境
+### 3. Build the Environment with One Command
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup_env.ps1
 ```
 
-Linux：
+Linux:
 
 ```bash
 bash scripts/setup_env.sh
 ```
 
-脚本会创建名为 `minigpt-crop` 的 Conda 环境，并在安装后验证 PyTorch、CUDA 和核心依赖。
+The script creates a Conda environment named `minigpt-crop`, then validates PyTorch, CUDA, and the core dependencies.
 
-### 4. 一条命令启动网页
+### 4. Launch the Web Interface with One Command
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\start_web.ps1
 ```
 
-Linux：
+Linux:
 
 ```bash
 bash scripts/start_web.sh
 ```
 
-模型通常需要 1-3 分钟加载。启动成功后浏览器会自动打开：
+Model loading usually takes 1-3 minutes. After startup, the browser opens automatically at:
 
 ```text
 http://127.0.0.1:7861/
 ```
 
-按 `Ctrl+C` 停止服务。
+Press `Ctrl+C` to stop the service.
 
-## 启动参数
+## Launch Options
 
-Windows 示例：
+Windows examples:
 
 ```powershell
-# 使用第 1 张 GPU，并改用 8080 端口
+# Use GPU 1 and port 8080
 powershell -ExecutionPolicy Bypass -File .\scripts\start_web.ps1 -GpuId 1 -Port 8080
 
-# 允许局域网设备访问
+# Allow access from other devices on the local network
 powershell -ExecutionPolicy Bypass -File .\scripts\start_web.ps1 -ServerName 0.0.0.0
 
-# 不自动打开浏览器
+# Do not open the browser automatically
 powershell -ExecutionPolicy Bypass -File .\scripts\start_web.ps1 -NoBrowser
 ```
 
-Linux 可通过环境变量配置：
+On Linux, use environment variables:
 
 ```bash
 MINIGPT_GPU_ID=1 MINIGPT_PORT=8080 MINIGPT_SERVER_NAME=0.0.0.0 bash scripts/start_web.sh
 ```
 
-也可以直接运行 Python：
+You can also run Python directly:
 
 ```bash
 conda run -n minigpt-crop --no-capture-output python -u demo_v2.py \
@@ -157,74 +159,74 @@ conda run -n minigpt-crop --no-capture-output python -u demo_v2.py \
   --inbrowser
 ```
 
-## 项目结构
+## Project Structure
 
 ```text
 .
-├── assets/examples/                 # 网页内置作物示例
+├── assets/examples/                 # Built-in crop examples
 ├── eval_configs/
 │   └── minigptv2_checkpoint_0_eval.yaml
 ├── minigpt4/
-│   └── models/projection.py         # 投影层和权重兼容逻辑
-├── models/                          # 用户放置模型权重，不提交到 Git
+│   └── models/projection.py         # Projection and weight compatibility logic
+├── models/                          # User-provided weights, excluded from Git
 ├── scripts/
 │   ├── setup_env.ps1
 │   ├── setup_env.sh
 │   ├── start_web.ps1
 │   └── start_web.sh
 ├── tests/test_projection.py
-├── demo_v2.py                       # 中文 Gradio 网页入口
+├── demo_v2.py                       # Chinese Gradio web entry point
 └── environment.yml
 ```
 
-## 验证
+## Verification
 
-运行投影层与权重兼容测试：
+Run the projection and weight compatibility tests:
 
 ```bash
 conda run -n minigpt-crop python tests/test_projection.py -v
 ```
 
-快速检查关键 Python 文件：
+Quickly validate the key Python files:
 
 ```bash
 conda run -n minigpt-crop python -m py_compile demo_v2.py minigpt4/models/projection.py minigpt4/models/minigpt_v2.py
 ```
 
-## 常见问题
+## Troubleshooting
 
-### 提示缺少模型文件
+### Missing Model Files
 
-启动脚本会检查四类模型。请确认文件名、目录层级与 [models/README.md](models/README.md) 完全一致，不要多嵌套一层 Hugging Face 仓库目录。
+The launch script checks all four model components. Confirm that every filename and directory level exactly matches [models/README.md](models/README.md). Avoid nesting an additional Hugging Face repository directory.
 
-### CUDA 不可用
+### CUDA Is Unavailable
 
-先执行：
+Run:
 
 ```bash
 conda run -n minigpt-crop python -c "import torch; print(torch.cuda.is_available(), torch.version.cuda)"
 ```
 
-若输出 `False`，请检查 NVIDIA 驱动是否支持 CUDA 11.8，并确认没有安装 CPU 版 PyTorch。
+If the output is `False`, verify that your NVIDIA driver supports CUDA 11.8 and that you did not install a CPU-only PyTorch build.
 
-### 显存不足
+### Out of GPU Memory
 
-关闭其他占用 GPU 的程序，保持 `low_resource: true`，或使用显存更大的 NVIDIA GPU。本项目默认以 8-bit 方式加载 Vicuna 7B。
+Close other GPU-intensive applications, keep `low_resource: true`, or use a GPU with more VRAM. The project loads Vicuna 7B in 8-bit mode by default.
 
-### 页面能打开但示例图不显示
+### The Page Opens but Example Images Are Missing
 
-确认 `assets/examples/` 中的 8 张 JPG 文件完整存在。项目不再读取外部 `dataset` 目录。
+Confirm that all eight JPG files exist in `assets/examples/`. The project no longer reads an external `dataset` directory.
 
-## 模型与数据说明
+## Model and Data Notes
 
-- `checkpoint_0.pth` 是作物病害任务微调权重，不包含 Vicuna、EVA ViT-G 或翻译模型的完整参数。
-- 示例图片清单与原始类别见 [assets/examples/README.md](assets/examples/README.md)。
-- 发布者和使用者应分别确认基础模型、微调权重及图片数据的许可证允许其使用和分发。
-- 请勿将 `models/` 中的权重直接提交到普通 Git 仓库。
+- `checkpoint_0.pth` contains crop disease fine-tuning weights. It does not contain the complete Vicuna, EVA ViT-G, or translation model parameters.
+- See [assets/examples/README.md](assets/examples/README.md) for the example image list and original classes.
+- Publishers and users must independently confirm that the licenses of the base models, fine-tuned weights, and image data permit their intended use and distribution.
+- Do not commit the weights under `models/` to a standard Git repository.
 
-## 致谢
+## Acknowledgements
 
-本项目基于以下开源工作：
+This project is based on the following open-source work:
 
 - [MiniGPT-4 / MiniGPT-v2](https://github.com/Vision-CAIR/MiniGPT-4)
 - [BLIP-2](https://huggingface.co/docs/transformers/model_doc/blip-2)
@@ -232,7 +234,7 @@ conda run -n minigpt-crop python -c "import torch; print(torch.cuda.is_available
 - [LLaMA](https://github.com/facebookresearch/llama)
 - [Helsinki-NLP OPUS-MT](https://huggingface.co/Helsinki-NLP/opus-mt-en-zh)
 
-MiniGPT-v2 论文：
+MiniGPT-v2 paper:
 
 ```bibtex
 @article{chen2023minigptv2,
@@ -243,6 +245,6 @@ MiniGPT-v2 论文：
 }
 ```
 
-## 许可证
+## License
 
-代码沿用仓库中的 [LICENSE.md](LICENSE.md) 和 [LICENSE_Lavis.md](LICENSE_Lavis.md)。模型权重与数据资源适用各自许可证。
+The code follows [LICENSE.md](LICENSE.md) and [LICENSE_Lavis.md](LICENSE_Lavis.md) in this repository. Model weights and data resources remain subject to their respective licenses.
